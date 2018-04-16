@@ -24,6 +24,10 @@
       email: /^[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*.[a-zA-Z]{2,3}$/i,
       password: /^(?=.*[a-zA-Z])(?=.*[!@#$%^*+=-])(?=.*[0-9]).{8,16}$/
     },
+    submitBtns: [
+      '#form .submit1',
+      '.submit2'
+    ],
     isRealTimeCheck: true
   });
 
@@ -47,10 +51,11 @@
       xss: '/:?*<>"|&\\%+;를 사용할 수 없습니다.',
       style: {}
     },
+    submitBtns: undefined,
     isRealTimeCheck: false
   };
   var formEl;
-  var submitBtnEl;
+  var submitBtnEls;
   var checkTagInfos = [];
 
   var messages = {
@@ -68,19 +73,12 @@
   }
 
   var isElementNode = function(target) {
-    console.log(target);
     if(getType(target).indexOf('element') === -1) {
       return false;
     }
 
     return target.nodeType === 1 ? true : false;
   }
-  
-  /**
-   *
-   * 외부에 노출할 함수
-   *
-   */
   
   var getType = function(target) {
     return Object.prototype.toString.call(target).toLowerCase().slice(8, -1);
@@ -107,6 +105,7 @@
         if(!formEl) {
           throw 'element를 찾을 수 없습니다.';
         }
+
       break;
       case 'object':
         if(!isElement) {
@@ -119,11 +118,67 @@
     }
   }
 
-  var setSubmitBtnEl = function() {
+  var setSubmitBtnEls = function() {
 
-    var submitBtnSelector = 'button[type="submit"]';
+    var submitBtns = options.submitBtns;
+    var submitBtnsType = getType(submitBtns);
+    var _submitBtnEls = [];
+    var submitRegex = /^.|^#/;
 
-    submitBtnEl = hasElement(submitBtnSelector) ? document.querySelector(submitBtnSelector) : undefined;
+    switch(submitBtnsType) {
+      case 'object': 
+        throw submitBtnsType + '는 submitBtns의 값으로 들어올 수 없습니다.';
+      break;
+      case 'array':
+
+        submitBtns.forEach(function(btn) {
+          var btnType = getType(btn);
+          var btnEl;
+
+          if(btnType === 'string') {
+            if(!submitRegex.test(btn)) {
+              throw '유효하지 않은 셀렉터입니다.';
+            }
+
+            btnEl = document.querySelector(btn);
+
+            if(!btnEl) {
+              throw 'element를 찾을 수 없습니다.';
+            }
+
+            _submitBtnEls.push(btnEl);
+
+          } else if(isElementNode(btn)) {
+
+            _submitBtnEls.push(btnEl);
+            
+          } else {
+            throw btn + '은 유효하지 않은 값입니다.';
+          }
+          
+        });
+      break;
+      case 'string':
+      case 'undefined':
+        var submitBtnSelector = submitBtns || 'button[type="submit"]';
+        var btnEl;
+
+        if(!submitRegex.test(submitBtnSelector)) {
+          throw '유효하지 않은 셀렉터입니다.';
+        }
+
+        btnEl = document.querySelector(submitBtnSelector);
+
+        if(!btnEl) {
+          throw 'element를 찾을 수 없습니다.';
+        }
+
+        _submitBtnEls.push(btnEl);
+
+      break;
+    }
+
+    submitBtnEls = _submitBtnEls.slice();
   }
 
   var checkXSS = function(target) {
@@ -150,6 +205,7 @@
       
       checkTagInfos.push(inputInfo);
     });
+    console.log('checkTagInfos: ', checkTagInfos);
   }
 
   var extendOpts = function(oldOpts, newOpts) {
@@ -284,7 +340,6 @@
     // option 합치기
     extendOpts(options, newOptions);
 
-    console.log(options);
     // data-valid 속성을 가지고 있는 태그들만 찾아 루프를 돌림.
     // data-valid 속성을 가지고 있는 태그를 찾는다.
     // 찾은 태그의 data-valid 값을 수집한다. 
@@ -295,45 +350,50 @@
     // 이벤트 할당
     // target: text, select
     // text: keyup
-    // select: ???
+    // select: change
     bindEvent();
 
     // summit 버튼 찾기 
     // 기본적으로 submit 버튼을 찾도록 만들고 만약 없으면 메서드를 통해 추가하도록 만들자
-    setSubmitBtnEl();
+    setSubmitBtnEls();
 
     // submitBtnEl
-    submitBtnEl.addEventListener('click', function(e) {
-      /*
-        required와 valid를 따로 검사해야함.
-        1. required와 valid의 우선순위 
-          1) required
-          2) valid
-        2. 중복된 valid가 있는경우 고려
-          ex) required, number, max, min인 경우
-        3. realTime에도 적용될 수 있도록 재사용성 고려
-      */
-      e.preventDefault();
+    if(submitBtnEls) {
+      submitBtnEls.forEach(function(submitBtnEl) {
+        submitBtnEl.addEventListener('click', function(e) {
+          /*
+            required와 valid를 따로 검사해야함.
+            1. required와 valid의 우선순위 
+              1) required
+              2) valid
+            2. 중복된 valid가 있는경우 고려
+              ex) required, number, max, min인 경우
+            3. realTime에도 적용될 수 있도록 재사용성 고려
+          */
+          e.preventDefault();
 
-      var invalidTagInfos = [];
+          var invalidTagInfos = [];
 
-      checkTagInfos.forEach(function(tagInfo) {
-        var checkedTagInfo = checkValid(tagInfo.el, false);
-        
-        if(!checkedTagInfo.isValid) {
-          invalidTagInfos.push({
-            el: tagInfo.el,
-            msg: checkedTagInfo.validMsg
+          checkTagInfos.forEach(function(tagInfo) {
+            var checkedTagInfo = checkValid(tagInfo.el, false);
+            
+            if(!checkedTagInfo.isValid) {
+              invalidTagInfos.push({
+                el: tagInfo.el,
+                msg: checkedTagInfo.validMsg
+              });
+            }
           });
-        }
-      });
 
-      if(invalidTagInfos.length > 0) {
-        console.log(invalidTagInfos);
-      } else {
-        this.submit();
-      }
-    });
+          if(invalidTagInfos.length > 0) {
+            console.log(invalidTagInfos);
+          } else {
+            this.submit();
+          }
+        });
+      });
+        
+    }
   }
   return {
     init: init

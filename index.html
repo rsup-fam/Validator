@@ -12,8 +12,13 @@
     <input type="text" data-valid="required email" id="email">
     <label for="password">password</label>
     <input type="text" data-valid="required password" id="password">
-    <button type="submit">전송</button>
+    <button class="submit1" type="submit">전송</button>
+    <select name="hobby" id="hobby" data-valid="required">
+      <option value="">선택하세요.</option>
+      <option value="movie">영화</option>
+    </select>
   </form>
+  <button class="submit2" type="button">전송2</button>
   <script src="./js/validator.js"></script>
 </body>
 </html>
