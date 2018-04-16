@@ -73,10 +73,11 @@
   }
 
   var isElementNode = function(target) {
+    
+    console.log(getType(target))
     if(getType(target).indexOf('element') === -1) {
       return false;
     }
-
     return target.nodeType === 1 ? true : false;
   }
   
@@ -92,7 +93,6 @@
 
     var formRegex = /^.|^#/g; // form 태그일 때도 추가해야 함.
     var targetType = getType(target);
-    var isElement = isElementNode(target);
 
     switch(targetType) {
       case 'string':
@@ -107,10 +107,7 @@
         }
 
       break;
-      case 'object':
-        if(!isElement) {
-          throw 'selector 또는 elementNode만 target으로 들어올 수 있습니다.';
-        }
+      case 'htmlinputelement':
         formEl = target;
       break;
       default:
@@ -265,18 +262,50 @@
       console.log(checkValid(e.target, true));
     }
   }
+  var submitEvent = function(e) {
+     /*
+      required와 valid를 따로 검사해야함.
+      1. required와 valid의 우선순위 
+        1) required
+        2) valid
+      2. 중복된 valid가 있는경우 고려
+        ex) required, number, max, min인 경우
+      3. realTime에도 적용될 수 있도록 재사용성 고려
+    */
+    e.preventDefault();
 
+    var invalidTagInfos = [];
+
+    checkTagInfos.forEach(function(tagInfo) {
+      var checkedTagInfo = checkValid(tagInfo.el, false);
+      
+      if(!checkedTagInfo.isValid) {
+        invalidTagInfos.push({
+          el: tagInfo.el,
+          msg: checkedTagInfo.validMsg
+        });
+      }
+    });
+
+    if(invalidTagInfos.length > 0) {
+      console.log(invalidTagInfos);
+    } else {
+      this.submit();
+    }
+  }
+  var setSubmitBtnElsEvent = function() {
+    if(submitBtnEls) {
+      submitBtnEls.forEach(function(submitBtnEl) {
+        submitBtnEl.addEventListener('click', submitEvent);
+      });
+    }
+  }
   var checkValid = function(target, isPreventRequired) {
 
-    /*
-      ** 매개변수로 뭘받지?
-        - valids
-        - isPreventRequired
-      고려할 점
-      1. realTime에도 적용해야하기 때문에 required 부분을 좀 고려해야함
-    */
-
-    // 1. required 고려하기
+    if(!isElementNode(target)) {
+      console.error(target + '은 ElementNode가 아닙니다.');
+      return;
+    }
 
     var _options = options;
     var valids = target.getAttribute('data-valid');
@@ -320,8 +349,6 @@
         break;
         case 'max':
         break;
-        // select
-        // case 'select': 
       }
 
       if(!validObj.isValid) {
@@ -357,43 +384,8 @@
     // 기본적으로 submit 버튼을 찾도록 만들고 만약 없으면 메서드를 통해 추가하도록 만들자
     setSubmitBtnEls();
 
-    // submitBtnEl
-    if(submitBtnEls) {
-      submitBtnEls.forEach(function(submitBtnEl) {
-        submitBtnEl.addEventListener('click', function(e) {
-          /*
-            required와 valid를 따로 검사해야함.
-            1. required와 valid의 우선순위 
-              1) required
-              2) valid
-            2. 중복된 valid가 있는경우 고려
-              ex) required, number, max, min인 경우
-            3. realTime에도 적용될 수 있도록 재사용성 고려
-          */
-          e.preventDefault();
-
-          var invalidTagInfos = [];
-
-          checkTagInfos.forEach(function(tagInfo) {
-            var checkedTagInfo = checkValid(tagInfo.el, false);
-            
-            if(!checkedTagInfo.isValid) {
-              invalidTagInfos.push({
-                el: tagInfo.el,
-                msg: checkedTagInfo.validMsg
-              });
-            }
-          });
-
-          if(invalidTagInfos.length > 0) {
-            console.log(invalidTagInfos);
-          } else {
-            this.submit();
-          }
-        });
-      });
-        
-    }
+    // submitBtnEls 이벤트 할당
+    setSubmitBtnElsEvent();
   }
   return {
     init: init
