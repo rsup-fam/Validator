@@ -1,0 +1,13 @@
+{
+  "name": "@rsup/validator",
+  "version": "0.0.1",
+  "main": "js/validator.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "bili js/validator.js -o dist -t browser --format umd,umd-min --moduleName Validator",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "bili": "^3.1.0"
+  }
+}
